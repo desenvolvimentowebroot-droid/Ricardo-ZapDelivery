@@ -15,11 +15,13 @@ const AdminLogin = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
     try {
       const response = await axios.post(`${API}/auth/login`, {
@@ -31,7 +33,9 @@ const AdminLogin = () => {
       toast.success('Login realizado com sucesso!');
       navigate('/admin/dashboard');
     } catch (error) {
-      toast.error('Credenciais inválidas');
+      const errorMsg = 'Credenciais inválidas. Verifique seu usuário e senha.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -54,6 +58,12 @@ const AdminLogin = () => {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-500 text-sm" data-testid="login-error">
+                {error}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium mb-2">Usuário</label>
               <Input
