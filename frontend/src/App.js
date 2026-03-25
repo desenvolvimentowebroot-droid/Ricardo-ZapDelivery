@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, Minus, Trash2, X } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -199,6 +199,7 @@ const CartDrawer = ({ cart, onUpdateQuantity, onRemove, onCheckout, isOpen, onOp
       <SheetContent side="right" className="bg-[#050505] border-white/10 w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="bebas text-3xl tracking-tight">Seu Pedido</SheetTitle>
+          <SheetDescription className="sr-only">Revise seu pedido e finalize no WhatsApp</SheetDescription>
         </SheetHeader>
 
         <div className="mt-8 space-y-6">
