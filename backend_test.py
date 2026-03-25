@@ -9,11 +9,16 @@ class HamburgueriaAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.failed_tests = []
+        self.admin_token = None
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, params=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, params=None, auth_required=False):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}"
         headers = {'Content-Type': 'application/json'}
+        
+        # Add authorization header if required
+        if auth_required and self.admin_token:
+            headers['Authorization'] = f'Bearer {self.admin_token}'
 
         self.tests_run += 1
         print(f"\n🔍 Testing {name}...")
@@ -24,6 +29,10 @@ class HamburgueriaAPITester:
                 response = requests.get(url, headers=headers, params=params, timeout=10)
             elif method == 'POST':
                 response = requests.post(url, json=data, headers=headers, timeout=10)
+            elif method == 'PUT':
+                response = requests.put(url, json=data, headers=headers, timeout=10)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers, timeout=10)
 
             success = response.status_code == expected_status
             if success:
@@ -144,6 +153,136 @@ class HamburgueriaAPITester:
             data=test_order
         )
 
+    # Admin Authentication Tests
+    def test_admin_login_valid(self):
+        """Test admin login with valid credentials"""
+        login_data = {
+            "username": "admin",
+            "password": "admin123"
+        }
+        
+        success, response = self.run_test(
+            "Admin Login - Valid Credentials",
+            "POST",
+            "auth/login",
+            200,
+            data=login_data
+        )
+        
+        if success and 'access_token' in response:
+            self.admin_token = response['access_token']
+            print(f"   ✅ Token obtained successfully")
+            return True
+        return False
+
+    def test_admin_login_invalid(self):
+        """Test admin login with invalid credentials"""
+        login_data = {
+            "username": "admin",
+            "password": "wrongpassword"
+        }
+        
+        return self.run_test(
+            "Admin Login - Invalid Credentials",
+            "POST",
+            "auth/login",
+            401,
+            data=login_data
+        )
+
+    # Admin Protected Routes Tests
+    def test_admin_get_products(self):
+        """Test getting products via admin endpoint"""
+        return self.run_test(
+            "Admin Get Products",
+            "GET",
+            "admin/products",
+            200,
+            auth_required=True
+        )
+
+    def test_admin_get_stats(self):
+        """Test getting admin statistics"""
+        return self.run_test(
+            "Admin Get Statistics",
+            "GET",
+            "admin/stats",
+            200,
+            auth_required=True
+        )
+
+    def test_admin_create_product(self):
+        """Test creating a product via admin endpoint"""
+        test_product = {
+            "name": "Admin Test Burger",
+            "description": "Test burger created via admin API",
+            "price": 29.90,
+            "category": "hamburgueres",
+            "image_url": "https://example.com/admin-test-burger.jpg"
+        }
+        
+        success, response = self.run_test(
+            "Admin Create Product",
+            "POST",
+            "admin/products",
+            200,
+            data=test_product,
+            auth_required=True
+        )
+        
+        # Store product ID for update/delete tests
+        if success and 'id' in response:
+            self.test_product_id = response['id']
+            print(f"   ✅ Product created with ID: {self.test_product_id}")
+        
+        return success, response
+
+    def test_admin_update_product(self):
+        """Test updating a product via admin endpoint"""
+        if not hasattr(self, 'test_product_id'):
+            print("   ⚠️  Skipping update test - no product ID available")
+            return False, {}
+            
+        updated_product = {
+            "name": "Updated Admin Test Burger",
+            "description": "Updated test burger description",
+            "price": 32.90,
+            "category": "hamburgueres",
+            "image_url": "https://example.com/updated-admin-test-burger.jpg"
+        }
+        
+        return self.run_test(
+            "Admin Update Product",
+            "PUT",
+            f"admin/products/{self.test_product_id}",
+            200,
+            data=updated_product,
+            auth_required=True
+        )
+
+    def test_admin_delete_product(self):
+        """Test deleting a product via admin endpoint"""
+        if not hasattr(self, 'test_product_id'):
+            print("   ⚠️  Skipping delete test - no product ID available")
+            return False, {}
+            
+        return self.run_test(
+            "Admin Delete Product",
+            "DELETE",
+            f"admin/products/{self.test_product_id}",
+            200,
+            auth_required=True
+        )
+
+    def test_admin_unauthorized_access(self):
+        """Test accessing admin endpoints without token"""
+        return self.run_test(
+            "Admin Unauthorized Access",
+            "GET",
+            "admin/products",
+            401
+        )
+
 def main():
     print("🍔 Starting Ricardo ZapDelivery API Tests...")
     print("=" * 50)
@@ -168,6 +307,39 @@ def main():
     
     # Test creating an order
     tester.test_create_order()
+    
+    print("\n" + "=" * 50)
+    print("🔐 ADMIN AUTHENTICATION TESTS")
+    print("=" * 50)
+    
+    # Test admin login with invalid credentials first
+    tester.test_admin_login_invalid()
+    
+    # Test admin login with valid credentials
+    login_success = tester.test_admin_login_valid()
+    
+    if login_success:
+        print("\n" + "=" * 50)
+        print("👑 ADMIN PROTECTED ROUTES TESTS")
+        print("=" * 50)
+        
+        # Test unauthorized access (without token)
+        temp_token = tester.admin_token
+        tester.admin_token = None
+        tester.test_admin_unauthorized_access()
+        tester.admin_token = temp_token
+        
+        # Test admin endpoints with valid token
+        tester.test_admin_get_products()
+        tester.test_admin_get_stats()
+        
+        # Test admin CRUD operations
+        create_success, _ = tester.test_admin_create_product()
+        if create_success:
+            tester.test_admin_update_product()
+            tester.test_admin_delete_product()
+    else:
+        print("❌ Admin login failed - skipping protected route tests")
     
     # Print final results
     print("\n" + "=" * 50)

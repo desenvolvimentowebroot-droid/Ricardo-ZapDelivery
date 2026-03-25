@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,11 +9,25 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import jwt
+from passlib.context import CryptContext
 
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Security
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 480
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
+# Admin credentials (in production, store in database)
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD_HASH = pwd_context.hash("admin123")
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -27,6 +42,14 @@ api_router = APIRouter(prefix="/api")
 
 
 # Define Models
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
@@ -68,10 +91,45 @@ class OrderCreate(BaseModel):
     delivery_fee: float
     total: float
 
+# Auth functions
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        return username
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 # Routes
 @api_router.get("/")
 async def root():
     return {"message": "Ricardo ZapDelivery API"}
+
+@api_router.post("/auth/login", response_model=Token)
+async def login(credentials: LoginRequest):
+    if credentials.username != ADMIN_USERNAME:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    if not verify_password(credentials.password, ADMIN_PASSWORD_HASH):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    access_token = create_access_token(data={"sub": credentials.username})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @api_router.get("/products", response_model=List[Product])
 async def get_products(category: Optional[str] = None):
@@ -217,6 +275,56 @@ async def create_order(order: OrderCreate):
     doc['created_at'] = doc['created_at'].isoformat()
     await db.orders.insert_one(doc)
     return order_obj
+
+# Admin routes (protected)
+@api_router.get("/admin/products", response_model=List[Product])
+async def admin_get_products(username: str = Depends(verify_token)):
+    products = await db.products.find({}, {"_id": 0}).to_list(1000)
+    return products
+
+@api_router.post("/admin/products", response_model=Product)
+async def admin_create_product(product: ProductCreate, username: str = Depends(verify_token)):
+    product_obj = Product(**product.model_dump())
+    doc = product_obj.model_dump()
+    await db.products.insert_one(doc)
+    return product_obj
+
+@api_router.put("/admin/products/{product_id}", response_model=Product)
+async def admin_update_product(
+    product_id: str,
+    product_update: ProductCreate,
+    username: str = Depends(verify_token)
+):
+    existing = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    updated_product = Product(id=product_id, **product_update.model_dump())
+    await db.products.update_one(
+        {"id": product_id},
+        {"$set": updated_product.model_dump()}
+    )
+    return updated_product
+
+@api_router.delete("/admin/products/{product_id}")
+async def admin_delete_product(product_id: str, username: str = Depends(verify_token)):
+    result = await db.products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product deleted successfully"}
+
+@api_router.get("/admin/stats")
+async def admin_get_stats(username: str = Depends(verify_token)):
+    pipeline = [
+        {"$group": {"_id": "$category", "count": {"$sum": 1}}}
+    ]
+    stats = await db.products.aggregate(pipeline).to_list(100)
+    total = await db.products.count_documents({})
+    
+    return {
+        "total_products": total,
+        "by_category": {item["_id"]: item["count"] for item in stats}
+    }
 
 # Include the router in the main app
 app.include_router(api_router)
