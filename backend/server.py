@@ -18,16 +18,16 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Security
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+SECRET_KEY = os.environ['JWT_SECRET_KEY']
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
-# Admin credentials (in production, store in database)
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD_HASH = pwd_context.hash("admin123")
+# Admin credentials from environment
+ADMIN_USERNAME = os.environ['ADMIN_USERNAME']
+ADMIN_PASSWORD_HASH = os.environ['ADMIN_PASSWORD_HASH']
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
