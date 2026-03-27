@@ -91,6 +91,19 @@ class OrderCreate(BaseModel):
     delivery_fee: float
     total: float
 
+class Settings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default="settings")
+    whatsapp_number: str
+
+class SettingsUpdate(BaseModel):
+    whatsapp_number: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 # Auth functions
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -276,6 +289,19 @@ async def create_order(order: OrderCreate):
     await db.orders.insert_one(doc)
     return order_obj
 
+@api_router.get("/settings")
+async def get_settings():
+    settings = await db.settings.find_one({"id": "settings"}, {"_id": 0})
+    if not settings:
+        # Create default settings if not exists
+        default_settings = {
+            "id": "settings",
+            "whatsapp_number": "5512988043993"
+        }
+        await db.settings.insert_one(default_settings)
+        return default_settings
+    return settings
+
 # Admin routes (protected)
 @api_router.get("/admin/products", response_model=List[Product])
 async def admin_get_products(username: str = Depends(verify_token)):
@@ -325,6 +351,53 @@ async def admin_get_stats(username: str = Depends(verify_token)):
         "total_products": total,
         "by_category": {item["_id"]: item["count"] for item in stats}
     }
+
+@api_router.put("/admin/settings", response_model=Settings)
+async def admin_update_settings(
+    settings_update: SettingsUpdate,
+    username: str = Depends(verify_token)
+):
+    settings = await db.settings.find_one({"id": "settings"}, {"_id": 0})
+    if not settings:
+        # Create if not exists
+        new_settings = Settings(whatsapp_number=settings_update.whatsapp_number)
+        await db.settings.insert_one(new_settings.model_dump())
+        return new_settings
+    
+    # Update existing
+    await db.settings.update_one(
+        {"id": "settings"},
+        {"$set": {"whatsapp_number": settings_update.whatsapp_number}}
+    )
+    
+    updated = await db.settings.find_one({"id": "settings"}, {"_id": 0})
+    return Settings(**updated)
+
+@api_router.post("/admin/change-password")
+async def admin_change_password(
+    password_data: ChangePasswordRequest,
+    username: str = Depends(verify_token)
+):
+    # Verify current password
+    if not verify_password(password_data.current_password, ADMIN_PASSWORD_HASH):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+    
+    # Hash new password
+    new_hash = pwd_context.hash(password_data.new_password)
+    
+    # Update .env file
+    env_path = ROOT_DIR / '.env'
+    with open(env_path, 'r') as f:
+        lines = f.readlines()
+    
+    with open(env_path, 'w') as f:
+        for line in lines:
+            if line.startswith('ADMIN_PASSWORD_HASH='):
+                f.write(f'ADMIN_PASSWORD_HASH="{new_hash}"\n')
+            else:
+                f.write(line)
+    
+    return {"message": "Senha alterada com sucesso! Faça login novamente."}
 
 # Include the router in the main app
 app.include_router(api_router)

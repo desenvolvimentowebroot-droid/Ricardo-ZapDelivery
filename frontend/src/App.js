@@ -12,10 +12,10 @@ import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import AdminLogin from '@/pages/AdminLogin';
 import AdminDashboard from '@/pages/AdminDashboard';
+import AdminSettings from '@/pages/AdminSettings';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-const WHATSAPP_NUMBER = '5512988043993';
 const DELIVERY_FEE = 8.00;
 
 const LOGO_URL = 'https://static.prod-images.emergentagent.com/jobs/24fe9bf0-ff71-4d55-a047-9b199488b204/images/5122189d90748987590e6af7ebeb136d28430af64ac43d92a38b0fb3cade986d.png';
@@ -320,18 +320,29 @@ const Home = () => {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [whatsappNumber, setWhatsappNumber] = useState('5512988043993');
 
   useEffect(() => {
     const initProducts = async () => {
       try {
         await axios.post(`${API}/seed-products`);
         loadProducts();
+        loadSettings();
       } catch (e) {
         console.error('Error seeding products:', e);
       }
     };
     initProducts();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const response = await axios.get(`${API}/settings`);
+      setWhatsappNumber(response.data.whatsapp_number);
+    } catch (e) {
+      console.error('Error loading settings:', e);
+    }
+  };
 
   const loadProducts = async (category = 'todos') => {
     try {
@@ -389,7 +400,7 @@ const Home = () => {
       `*Taxa de Entrega:* R$ ${DELIVERY_FEE.toFixed(2)}\n` +
       `*Total:* R$ ${total.toFixed(2)}`;
 
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
     
     setCart([]);
@@ -482,6 +493,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
         </Routes>
       </BrowserRouter>
     </div>

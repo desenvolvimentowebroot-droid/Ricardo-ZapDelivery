@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, LogOut, Package, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Trash2, LogOut, Package, TrendingUp, Settings } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -182,6 +182,15 @@ const AdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Button
+              onClick={() => navigate('/admin/settings')}
+              variant="outline"
+              className="bg-[#121212] border-white/10 hover:bg-[#1A1A1A]"
+              data-testid="settings-button"
+            >
+              <Settings className="h-5 w-5 mr-2" />
+              Configurações
+            </Button>
             <Button
               onClick={() => navigate('/')}
               variant="outline"
