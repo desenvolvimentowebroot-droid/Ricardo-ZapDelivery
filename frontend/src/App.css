@@ -61,3 +61,17 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+.embla {
+  overflow: hidden;
+}
+
+.embla__container {
+  display: flex;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.embla__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+}

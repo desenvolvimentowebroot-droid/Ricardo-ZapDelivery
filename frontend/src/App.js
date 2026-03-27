@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import '@/App.css';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import AdminLogin from '@/pages/AdminLogin';
 import AdminDashboard from '@/pages/AdminDashboard';
 import AdminSettings from '@/pages/AdminSettings';
+import useEmblaCarousel from 'embla-carousel-react';
+import Autoplay from 'embla-carousel-autoplay';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -56,6 +58,51 @@ const Header = ({ cartCount, onCartClick }) => {
 };
 
 const Hero = ({ onExploreClick }) => {
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { 
+      loop: true,
+      duration: 30
+    },
+    [Autoplay({ delay: 4000, stopOnInteraction: false })]
+  );
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+  }, [emblaApi, onSelect]);
+
+  const carouselImages = [
+    {
+      url: 'https://customer-assets.emergentagent.com/job_smooth-food-order/artifacts/59mcit0i_pexels-ollivves-1025804.jpg',
+      alt: 'Hambúrguer gourmet duplo'
+    },
+    {
+      url: 'https://customer-assets.emergentagent.com/job_smooth-food-order/artifacts/ysb12jnq_pexels-christina-petsos-200616875-11568799.jpg',
+      alt: 'Hambúrguer artesanal com batatas'
+    },
+    {
+      url: 'https://customer-assets.emergentagent.com/job_smooth-food-order/artifacts/wzllt6ve_pexels-adrian-dorobantu-989175-2089717.jpg',
+      alt: 'Hambúrguer triplo premium'
+    },
+    {
+      url: 'https://customer-assets.emergentagent.com/job_smooth-food-order/artifacts/kj497g99_pexels-atomlaborblog-776314.jpg',
+      alt: 'Hambúrguer na grelha'
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1611309454921-16cef3438ee0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHwyfHxnb3VybWV0JTIwYnVyZ2VyJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc0Mzk5OTc1fDA&ixlib=rb-4.1.0&q=85',
+      alt: 'Hambúrguer clássico'
+    }
+  ];
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -108,11 +155,39 @@ const Hero = ({ onExploreClick }) => {
             transition={{ duration: 1, delay: 0.3 }}
             className="relative hidden lg:block"
           >
-            <img
-              src="https://images.unsplash.com/photo-1611309454921-16cef3438ee0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHwyfHxnb3VybWV0JTIwYnVyZ2VyJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc0Mzk5OTc1fDA&ixlib=rb-4.1.0&q=85"
-              alt="Gourmet Burger"
-              className="floating-burger w-full h-auto max-w-2xl rounded-3xl"
-            />
+            <div className="overflow-hidden rounded-3xl" ref={emblaRef}>
+              <div className="flex">
+                {carouselImages.map((image, index) => (
+                  <div key={index} className="flex-[0_0_100%] min-w-0">
+                    <img
+                      src={image.url}
+                      alt={image.alt}
+                      className="w-full h-auto max-w-2xl rounded-3xl object-cover"
+                      style={{ aspectRatio: '1/1' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Decorative gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-40 rounded-3xl pointer-events-none"></div>
+            
+            {/* Carousel dots */}
+            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+              {carouselImages.map((_, index) => (
+                <button
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    index === selectedIndex
+                      ? 'bg-[#FF4500] w-8'
+                      : 'bg-white/30 hover:bg-white/50'
+                  }`}
+                  onClick={() => emblaApi?.scrollTo(index)}
+                  aria-label={`Ir para slide ${index + 1}`}
+                />
+              ))}
+            </div>
           </motion.div>
         </div>
       </div>
