@@ -389,8 +389,96 @@ const CartDrawer = ({ cart, onUpdateQuantity, onRemove, onCheckout, isOpen, onOp
   );
 };
 
+const FeaturedDeals = ({ products, onAddToCart }) => {
+  if (!products || products.length === 0) return null;
+
+  return (
+    <section className="py-16 bg-gradient-to-b from-[#050505] to-[#0A0A0A]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12"
+        >
+          <span className="inline-block px-4 py-2 bg-[#FF4500]/10 border border-[#FF4500]/30 rounded-full text-[#FF4500] text-sm font-bold mb-4">
+            🔥 PROMOÇÕES DO DIA
+          </span>
+          <h2 className="bebas text-5xl sm:text-6xl tracking-tight mb-4">
+            Combos Imperdíveis
+          </h2>
+          <p className="text-[#A3A3A3] text-lg max-w-2xl mx-auto">
+            Aproveite nossas ofertas especiais e economize no seu pedido
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {products.map((product, index) => (
+            <motion.div
+              key={product.id}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              className="group relative bg-gradient-to-br from-[#1A1A1A] to-[#121212] border border-[#FF4500]/20 rounded-3xl overflow-hidden hover:border-[#FF4500]/50 transition-all duration-300"
+              data-testid={`featured-product-${product.id}`}
+            >
+              {/* Badge "COMBO X" */}
+              <div className="absolute top-4 left-4 z-10">
+                <span className="inline-block px-4 py-2 bg-[#FF4500] text-white font-bold rounded-full text-sm bebas tracking-wide">
+                  {product.name.split(' ')[0]} {product.name.split(' ')[1]}
+                </span>
+              </div>
+
+              {/* Image */}
+              <div className="aspect-square overflow-hidden">
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-transparent opacity-60"></div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <h3 className="bebas text-2xl tracking-tight mb-2">{product.name}</h3>
+                <p className="text-sm text-[#A3A3A3] mb-4 line-clamp-2">{product.description}</p>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-[#A3A3A3] line-through block">R$ {(product.price * 1.3).toFixed(2)}</span>
+                    <span className="text-3xl font-bold text-[#FF4500]">
+                      R$ {product.price.toFixed(2)}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => onAddToCart(product)}
+                    className="bg-[#FF4500] hover:bg-[#E03C00] rounded-full px-6 py-6"
+                    data-testid={`add-featured-${product.id}`}
+                  >
+                    <Plus className="h-5 w-5 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+
+                {/* Economia badge */}
+                <div className="mt-4 inline-block px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-green-500 text-xs font-bold">
+                  💰 Economia de R$ {((product.price * 1.3) - product.price).toFixed(2)}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const Home = () => {
   const [products, setProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [activeCategory, setActiveCategory] = useState('todos');
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -403,6 +491,7 @@ const Home = () => {
         await axios.post(`${API}/seed-products`);
         loadProducts();
         loadSettings();
+        loadFeaturedProducts();
       } catch (e) {
         console.error('Error seeding products:', e);
       }
@@ -416,6 +505,15 @@ const Home = () => {
       setWhatsappNumber(response.data.whatsapp_number);
     } catch (e) {
       console.error('Error loading settings:', e);
+    }
+  };
+
+  const loadFeaturedProducts = async () => {
+    try {
+      const response = await axios.get(`${API}/products/featured`);
+      setFeaturedProducts(response.data);
+    } catch (e) {
+      console.error('Error loading featured products:', e);
     }
   };
 
@@ -496,6 +594,8 @@ const Home = () => {
       <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
       
       <Hero onExploreClick={scrollToMenu} />
+
+      <FeaturedDeals products={featuredProducts} onAddToCart={addToCart} />
 
       <div id="menu-section">
         <CategoryFilter

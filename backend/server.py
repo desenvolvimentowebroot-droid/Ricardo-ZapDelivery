@@ -59,6 +59,7 @@ class Product(BaseModel):
     price: float
     category: str
     image_url: str
+    featured: bool = False
 
 class ProductCreate(BaseModel):
     name: str
@@ -66,6 +67,7 @@ class ProductCreate(BaseModel):
     price: float
     category: str
     image_url: str
+    featured: bool = False
 
 class OrderItem(BaseModel):
     product_id: str
@@ -153,6 +155,11 @@ async def get_products(category: Optional[str] = None):
     products = await db.products.find(query, {"_id": 0}).to_list(1000)
     return products
 
+@api_router.get("/products/featured", response_model=List[Product])
+async def get_featured_products():
+    products = await db.products.find({"featured": True}, {"_id": 0}).to_list(10)
+    return products
+
 @api_router.post("/products", response_model=Product)
 async def create_product(product: ProductCreate):
     product_obj = Product(**product.model_dump())
@@ -168,6 +175,34 @@ async def seed_products():
         return {"message": "Products already seeded", "count": count}
     
     products = [
+        # COMBOS PROMOCIONAIS (FEATURED)
+        {
+            "id": str(uuid.uuid4()),
+            "name": "COMBO 1 - Clássico",
+            "description": "1 Hambúrguer Classic + Batata Grande + Refrigerante 500ml",
+            "price": 39.90,
+            "category": "hamburgueres",
+            "image_url": "https://images.unsplash.com/photo-1763689389824-dd2cea2e5772?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2OTV8MHwxfHNlYXJjaHwxfHxidXJnZXIlMjBjb21ibyUyMG1lYWwlMjBmcmllcyUyMGRyaW5rfGVufDB8fHx8MTc3NDc0MzgyOXww&ixlib=rb-4.1.0&q=85",
+            "featured": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "COMBO 2 - Bacon Supreme",
+            "description": "1 Bacon Supreme + Onion Rings + Refrigerante 500ml + Sobremesa",
+            "price": 54.90,
+            "category": "hamburgueres",
+            "image_url": "https://images.unsplash.com/photo-1762729882655-addef78f0b5c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2OTV8MHwxfHNlYXJjaHwyfHxidXJnZXIlMjBjb21ibyUyMG1lYWwlMjBmcmllcyUyMGRyaW5rfGVufDB8fHx8MTc3NDc0MzgyOXww&ixlib=rb-4.1.0&q=85",
+            "featured": True
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "name": "COMBO 3 - Família",
+            "description": "3 Hambúrgueres à escolha + 2 Batatas Grandes + 3 Refrigerantes + Nuggets",
+            "price": 99.90,
+            "category": "hamburgueres",
+            "image_url": "https://images.unsplash.com/photo-1747207323834-fe2faaa0b119?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2OTV8MHwxfHNlYXJjaHwzfHxidXJnZXIlMjBjb21ibyUyMG1lYWwlMjBmcmllcyUyMGRyaW5rfGVufDB8fHx8MTc3NDc0MzgyOXww&ixlib=rb-4.1.0&q=85",
+            "featured": True
+        },
         # Hambúrgueres
         {
             "id": str(uuid.uuid4()),
@@ -175,7 +210,8 @@ async def seed_products():
             "description": "Hambúrguer 180g, queijo cheddar, alface, tomate, cebola roxa e molho especial",
             "price": 28.90,
             "category": "hamburgueres",
-            "image_url": "https://images.unsplash.com/photo-1662452883375-9226ea22c765?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHwxfHxnb3VybWV0JTIwYnVyZ2VyJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc0Mzk5OTc1fDA&ixlib=rb-4.1.0&q=85"
+            "image_url": "https://images.unsplash.com/photo-1662452883375-9226ea22c765?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHwxfHxnb3VybWV0JTIwYnVyZ2VyJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc0Mzk5OTc1fDA&ixlib=rb-4.1.0&q=85",
+            "featured": False
         },
         {
             "id": str(uuid.uuid4()),
@@ -183,7 +219,8 @@ async def seed_products():
             "description": "Dois hambúrgueres 180g, bacon crocante, queijo cheddar duplo, cebola caramelizada",
             "price": 36.90,
             "category": "hamburgueres",
-            "image_url": "https://images.unsplash.com/photo-1673166516558-3f1b88a22db8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHw0fHxnb3VybWV0JTIwYnVyZ2VyJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc0Mzk5OTc1fDA&ixlib=rb-4.1.0&q=85"
+            "image_url": "https://images.unsplash.com/photo-1673166516558-3f1b88a22db8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHw0fHxnb3VybWV0JTIwYnVyZ2VyJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc0Mzk5OTc1fDA&ixlib=rb-4.1.0&q=85",
+            "featured": False
         },
         {
             "id": str(uuid.uuid4()),

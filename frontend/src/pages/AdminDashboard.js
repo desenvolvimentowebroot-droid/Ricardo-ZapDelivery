@@ -34,7 +34,8 @@ const AdminDashboard = () => {
     description: '',
     price: '',
     category: 'hamburgueres',
-    image_url: ''
+    image_url: '',
+    featured: false
   });
 
   useEffect(() => {
@@ -99,7 +100,8 @@ const AdminDashboard = () => {
         description: product.description,
         price: product.price.toString(),
         category: product.category,
-        image_url: product.image_url
+        image_url: product.image_url,
+        featured: product.featured || false
       });
     } else {
       setEditingProduct(null);
@@ -108,7 +110,8 @@ const AdminDashboard = () => {
         description: '',
         price: '',
         category: 'hamburgueres',
-        image_url: ''
+        image_url: '',
+        featured: false
       });
     }
     setIsModalOpen(true);
@@ -426,6 +429,24 @@ const AdminDashboard = () => {
                   />
                 </div>
               )}
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-[#1A1A1A] rounded-lg border border-white/10">
+              <input
+                type="checkbox"
+                id="featured"
+                checked={formData.featured}
+                onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                className="w-5 h-5 rounded border-white/20 bg-[#121212] text-[#FF4500] focus:ring-[#FF4500] focus:ring-offset-0"
+              />
+              <div className="flex-1">
+                <label htmlFor="featured" className="block font-medium cursor-pointer">
+                  Destacar como Promoção do Dia
+                </label>
+                <p className="text-xs text-[#A3A3A3] mt-1">
+                  Este produto aparecerá na seção de promoções da página inicial
+                </p>
+              </div>
             </div>
 
             <div className="flex gap-3 pt-4">
