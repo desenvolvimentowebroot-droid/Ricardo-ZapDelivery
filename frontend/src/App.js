@@ -598,6 +598,27 @@ const Home = () => {
       <FeaturedDeals products={featuredProducts} onAddToCart={addToCart} />
 
       <div id="menu-section">
+        {/* Menu Title */}
+        <div className="py-16 bg-[#050505]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-8"
+            >
+              <h2 className="bebas text-5xl sm:text-6xl lg:text-7xl tracking-tight mb-4">
+                Nossos Famosos e{' '}
+                <span className="gradient-text">Tradicionais</span>
+              </h2>
+              <p className="text-[#A3A3A3] text-lg max-w-2xl mx-auto">
+                Escolha entre nossa seleção premium de hambúrgueres artesanais, acompanhamentos crocantes e bebidas geladas
+              </p>
+            </motion.div>
+          </div>
+        </div>
+
         <CategoryFilter
           categories={categories}
           activeCategory={activeCategory}
